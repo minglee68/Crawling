@@ -1,36 +1,50 @@
-from urllib.request import urlopen as uReq
-from bs4 import BeautifulSoup as soup
+from selenium import webdriver
+import re
+import sys
+import json
 
-my_url = "http://www.newegg.com/Video-Cards-Video-Devices/Category/ID-38?Tpk=graphics%20card"
+try:
 
-uClient = uReq(my_url)
-page_html = uClient.read()
-uClient.close()
+    base_url = 'http://hisnet.handong.edu/haksa/hakjuk/HHAK110M.php'
 
-page_soup = soup(page_html, "html.parser")
+    driver = webdriver.Chrome('chromedriver')
+    driver.get("https://hisnet.handong.edu/login/login.php")
 
-containers = page_soup.findAll("div", {"class":"item-container"})
+    driver.find_element_by_name('id').send_keys(str(sys.argv[1]))
+    driver.find_element_by_name('password').send_keys(str(sys.argv[2]))
 
-filename = "products.csv"
-f = open(filename, "w")
+    driver.find_element_by_xpath('//input[@src="/2012_images/intro/btn_login.gif"]').click()
 
-headers = "brand, product_name, shipping\n"
+    driver.get(base_url)
 
-f.write(headers)
+    name = driver.find_element_by_xpath('//form[@name="form1"]/table/tbody/tr[1]/td[2]')
+    grade_stu_id = driver.find_element_by_xpath('//form[@name="form1"]/table/tbody/tr[2]/td[2]')
+    department = driver.find_element_by_xpath('//form[@name="form1"]/table/tbody/tr[6]/td[2]')
 
-for container in containers:
-    brand = container.div.div.a.img["title"]
+    pattern_grade = re.compile(r"^[0-9]")
+    pattern_stu_id = re.compile(r"[0-9]{8}$")
 
-    title_container = container.findAll("a", {"class":"item-title"})
-    product_name = title_container[0].text
+    user_name = name.text
+    user_grade = pattern_grade.search(grade_stu_id.text).group()
+    user_stu_id = pattern_stu_id.search(grade_stu_id.text).group()
+    user_department = department.text
 
-    shipping_container = container.findAll("li", {"class":"price-ship"})
-    shipping = shipping_container[0].text.strip()
+    userInfo = {
+        "username" : str(sys.argv[1]),
+        "name" : user_name,
+        "grade" : user_grade,
+        "student_id" : user_stu_id,
+        "user_department" : user_department
+    }
 
-    print("brand: " + brand)
-    print("product name: " + product_name)
-    print("shipping: " + shipping)
+    json_data = json.dumps(userInfo)
 
-    f.write(brand + "," + product_name.replace(",", "|") + "," + shipping + "\n")
+    driver.quit()
 
-f.close()
+    print(json_data)
+
+except:
+    driver.quit()
+    error = {"error": "true"}
+    json_data = json.dumps(error)
+    print(json_data)
