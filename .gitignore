@@ -71,3 +71,6 @@ typings/
 
 # Serverless directories
 .serverless
+
+# ChromeDriver
+chromedriver.exe
